@@ -1,71 +1,212 @@
-"use client"
+"use client";
 
 import { authClient } from "@/lib/auth-client";
+import Link from "next/link";
 import { redirect } from "next/navigation";
+import { toast } from "react-toastify";
 
 const SignUpPage = () => {
+    const handleGoogleSignIn = async () => {
+        try {
+            const { error } = await authClient.signIn.social({
+                provider: "google",
+                callbackURL: "/",
+            });
+
+            if (error) {
+                console.error("Google sign-in error:", error);
+                toast.error("Google দিয়ে সাইন ইন করতে সমস্যা হয়েছে।");
+            }
+        } catch (error) {
+            console.error("Google sign-in error:", error);
+            toast.error("Google দিয়ে সাইন ইন করতে সমস্যা হয়েছে।");
+        }
+    };
+
+    const handleGitHubSignIn = async () => {
+        try {
+            const { error } = await authClient.signIn.social({
+                provider: "github",
+                callbackURL: "/",
+            });
+
+            if (error) {
+                console.error("GitHub sign-in error:", error);
+                toast.error("GitHub দিয়ে সাইন ইন করতে সমস্যা হয়েছে।");
+            }
+        } catch (error) {
+            console.error("GitHub sign-in error:", error);
+            toast.error("GitHub দিয়ে সাইন ইন করতে সমস্যা হয়েছে।");
+        }
+    };
 
     const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
+
         const formData = new FormData(e.currentTarget);
-        const user = {
-            name: String(formData.get("name") ?? ""),
-            email: String(formData.get("email") ?? ""),
-            password: String(formData.get("password") ?? ""),
-            image: String(formData.get("image") ?? "") || undefined,
-        };
-        // console.log(user);
-        const { data, error } = await authClient.signUp.email({
-            ...user,
-            callbackURL: "/"
-        });
-        if (data) {
-            console.log("User signed up successfully:", data);
-            redirect("/");
+
+        const name = formData.get("name");
+        const email = formData.get("email");
+        const password = formData.get("password");
+        const confirmPassword = formData.get("confirmPassword");
+
+        if (
+            typeof name !== "string" ||
+            typeof email !== "string" ||
+            typeof password !== "string" ||
+            typeof confirmPassword !== "string"
+        ) {
+            toast.error("অনুগ্রহ করে সব তথ্য পূরণ করুন।");
+            return;
         }
 
-        if (error) {
-            console.error("Error signing up:", error);
+        if (
+            !name.trim() ||
+            !email.trim() ||
+            !password ||
+            !confirmPassword
+        ) {
+            toast.error("অনুগ্রহ করে সব তথ্য পূরণ করুন।");
+            return;
         }
-    };
-    const handleGoogleSignIn = async () => {
-        const data = await authClient.signIn.social({
-            provider: "google",
-        });
-        console.log("Google sign-in data:", data);
-    };
-    const handleGitHubSignIn = async () => {
-        const data = await authClient.signIn.social({
-            provider: "github"
-        });
-        console.log("GitHub sign-in data:", data);
+
+        if (password !== confirmPassword) {
+            toast.error("পাসওয়ার্ড এবং নিশ্চিত পাসওয়ার্ড মিলছে না!");
+            return;
+        }
+
+        try {
+            const { data, error } = await authClient.signUp.email({
+                name: name.trim(),
+                email: email.trim(),
+                password,
+                callbackURL: "/",
+            });
+
+            if (error) {
+                console.error("Error signing up:", error);
+                toast.error(
+                    "সাইন আপ করতে সমস্যা হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।"
+                );
+                return;
+            }
+
+            if (data) {
+                console.log("User signed up successfully:", data);
+
+                toast.success(
+                    "সাইন আপ সফল হয়েছে! অনুগ্রহ করে আপনার ইমেইল যাচাই করুন।"
+                );
+
+                redirect("/");
+            }
+        } catch (error) {
+            console.error("Error signing up:", error);
+            toast.error("একটি সমস্যা হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।");
+        }
     };
 
     return (
-        <div className="mt-5">
-            <form className="flex flex-col items-center gap-4" onSubmit={onSubmit}>
-                <h2 className='font-bold text-2xl text-red-700'>সাইন আপ</h2>
-                <fieldset className="fieldset border-base-300 rounded-box w-xs  p-4">
+        <div>
+            <div className="mt-5">
+                <form
+                    onSubmit={onSubmit}
+                    className="flex flex-col items-center gap-4"
+                >
+                    <h2 className="font-bold text-2xl text-red-700">
+                        অ্যাকাউন্ট তৈরি করুন
+                    </h2>
 
-                    <label className="label">নাম</label>
-                    <input name="name" type="text" className="input" placeholder="নাম" />
+                    <p className="text-sm text-gray-500 text-center">
+                        বিনা খরচে সাইন আপ করে সব বিস্তারিত দাম দেখুন।
+                    </p>
 
-                    <label className="label">Image</label>
-                    <input name="image" type="url" className="input" placeholder="Image" />
+                    <fieldset className="fieldset border-base-300 rounded-box w-xs p-4">
+                        <label className="label">নাম</label>
+                        <input
+                            name="name"
+                            type="text"
+                            className="input"
+                            placeholder="আপনার নাম"
+                            autoComplete="name"
+                            required
+                        />
 
-                    <label className="label">ইমেইল</label>
-                    <input name="email" type="email" className="input" placeholder="ইমেইল" />
+                        <label className="label">ইমেইল</label>
+                        <input
+                            name="email"
+                            type="email"
+                            className="input"
+                            placeholder="আপনার ইমেইল"
+                            autoComplete="email"
+                            required
+                        />
 
-                    <label className="label">পাসওয়ার্ড</label>
-                    <input name="password" type="password" className="input" placeholder="পাসওয়ার্ড" />
+                        <label className="label">পাসওয়ার্ড</label>
+                        <input
+                            name="password"
+                            type="password"
+                            className="input"
+                            placeholder="পাসওয়ার্ড"
+                            autoComplete="new-password"
+                            required
+                        />
 
-                    <button type="submit" className="btn btn-neutral mt-4 bg-red-700">সাইন আপ করুন</button>
-                </fieldset>
-            </form>
-            <button className="btn btn-outline mt-4" onClick={handleGoogleSignIn}>Sign in with Google</button>
-            <button className="btn btn-outline mt-4" onClick={handleGitHubSignIn}>Sign in with GitHub</button>
+                        <label className="label">
+                            পাসওয়ার্ড নিশ্চিত করুন
+                        </label>
+                        <input
+                            name="confirmPassword"
+                            type="password"
+                            className="input"
+                            placeholder="পাসওয়ার্ড আবার লিখুন"
+                            autoComplete="new-password"
+                            required
+                        />
+
+                        <button
+                            type="submit"
+                            className="btn btn-neutral mt-4 bg-red-700"
+
+                        >
+                            সাইন আপ করুন
+                        </button>
+                    </fieldset>
+
+                    <p className="text-sm text-gray-500">
+                        ----------------- অথবা -----------------
+                    </p>
+                </form>
+
+                <div className="flex flex-col items-center mt-4">
+                    <button
+                        type="button"
+                        onClick={handleGoogleSignIn}
+                        className="btn btn-outline mt-4"
+                    >
+                        Google দিয়ে চালিয়ে যান
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={handleGitHubSignIn}
+                        className="btn btn-outline mt-4"
+                    >
+                        GitHub দিয়ে চালিয়ে যান
+                    </button>
+
+                    <Link
+                        className="text-gray-500 mt-5 text-sm"
+                        href="/"
+                    >
+                        ← হোম পেজে ফিরে যান
+                    </Link>
+                </div>
+            </div>
         </div>
     );
+
+
 };
 
 export default SignUpPage;
